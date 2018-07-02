@@ -11,9 +11,10 @@
     "clean": "del-cli lib"
   },
   "dependencies": {
+    "@chip-in/resource-node": "0.0.16",
     "express": "^4.16.1",
-    "request": "^2.83.0",
-    "@chip-in/resource-node": "*"
+    "morgan": "^1.9.0",
+    "request": "^2.83.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
