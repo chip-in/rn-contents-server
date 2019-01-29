@@ -1,6 +1,7 @@
 import webClient from 'request';
 import { ResourceNode, ServiceEngine, Proxy, Subscriber } from '@chip-in/resource-node';
 import http from 'http';
+import Path from 'path-parser'
 
 process.on('unhandledRejection', console.dir);
 
@@ -44,12 +45,13 @@ class StaticFileServer extends ServiceEngine{
     this.port = 13000;
     this.path = option.path;
     this.mode = option.mode;
+    this.rewriteRule = option.rewriteRule;
   }
   
   start(node) {
     return Promise.resolve()
       .then(()=>this._startWebServer())
-      .then(()=>node.mount(this.path, this.mode, new ReverseProxy(node, this.path, this.port)))
+      .then(()=>node.mount(this.path, this.mode, new ReverseProxy(node, this.path, this.port, this.rewriteRule)))
       .then((ret)=>this.mountId = ret)
       .then(()=>node.logger.info("rn-contents-server started. Try to access '" + coreNodeUrl + this.path + "'"))
   }
@@ -93,7 +95,7 @@ class StaticFileServer extends ServiceEngine{
 }
 
 class ReverseProxy extends Proxy {
-  constructor(rnode, path, port) {
+  constructor(rnode, path, port, rewriteRule) {
     super();
     this.rnode = rnode;
     if (path == null) {
@@ -101,6 +103,20 @@ class ReverseProxy extends Proxy {
     }
     this.basePath = path[path.length - 1] !== "/" ? path + "/" : path;
     this.port = port;
+    this.rewriteRule = [];
+    if (rewriteRule != null) {
+      var defs = [].concat(rewriteRule);
+      defs.forEach((def)=>{
+        try {
+          this.rewriteRule.push({
+            "source" : new Path(def.source),
+            "dest" : def.dest
+          });
+        } catch (e) {
+          this.rnode.logger.error("Failed to parse rewrite rule def:" + def, e);
+        }
+      })
+    }
   }
   onReceive(req, res) {
     return Promise.resolve()
@@ -128,7 +144,15 @@ class ReverseProxy extends Proxy {
             resolve(res);
           };
 
-          var url = "http://localhost:" + this.port + String(req.url).substr(this.basePath.length-1);
+          var dstPath = String(req.url).substr(this.basePath.length-1);
+          for (var i = 0; i < this.rewriteRule.length; i++) {
+            if (this.rewriteRule[i].source.test(dstPath)) {
+              dstPath = this.rewriteRule[i].dest;
+              this.rnode.logger.info("Rewrite:" + req.url + " to " + dstPath);
+              break;
+            }
+          }
+          var url = "http://localhost:" + this.port + dstPath;
           var option = {
             url,
             headers: req.headers,
