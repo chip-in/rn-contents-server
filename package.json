@@ -1,6 +1,6 @@
 {
   "name": "rn-contents-server",
-  "version": "0.0.21",
+  "version": "0.0.22",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "clean": "del-cli lib"
   },
   "dependencies": {
-    "@chip-in/resource-node": "0.0.18-d9",
+    "@chip-in/resource-node": "0.0.18-d12",
     "express": "^4.16.1",
     "morgan": "^1.9.1",
     "path-parser": "^4.2.0",
