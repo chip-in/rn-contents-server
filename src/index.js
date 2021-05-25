@@ -46,12 +46,13 @@ class StaticFileServer extends ServiceEngine{
     this.path = option.path;
     this.mode = option.mode;
     this.rewriteRule = option.rewriteRule;
+    this.headerRule = option.headerRule;
   }
   
   start(node) {
     return Promise.resolve()
       .then(()=>this._startWebServer())
-      .then(()=>node.mount(this.path, this.mode, new ReverseProxy(node, this.path, this.port, this.rewriteRule)))
+      .then(()=>node.mount(this.path, this.mode, new ReverseProxy(node, this.path, this.port, this.rewriteRule, this.headerRule)))
       .then((ret)=>this.mountId = ret)
       .then(()=>node.logger.info("rn-contents-server started. Try to access '" + coreNodeUrl + this.path + "'"))
   }
@@ -95,7 +96,7 @@ class StaticFileServer extends ServiceEngine{
 }
 
 class ReverseProxy extends Proxy {
-  constructor(rnode, path, port, rewriteRule) {
+  constructor(rnode, path, port, rewriteRule, headerRule) {
     super();
     this.rnode = rnode;
     if (path == null) {
@@ -114,6 +115,20 @@ class ReverseProxy extends Proxy {
           });
         } catch (e) {
           this.rnode.logger.error("Failed to parse rewrite rule def:" + def, e);
+        }
+      })
+    }
+    this.headerRule = []
+    if (headerRule != null) {
+      var defs = [].concat(headerRule);
+      defs.forEach((def)=>{
+        try {
+          this.headerRule.push({
+            "source" : new RegExp(def.source),
+            "headers" : Array.isArray(def.headers) ? def.headers : []
+          });
+        } catch (e) {
+          this.rnode.logger.error("Failed to parse header rule def:" + def, e);
         }
       })
     }
@@ -140,6 +155,21 @@ class ReverseProxy extends Proxy {
             //copy properties
             var targetProps = ["headers", "statusCode" ];
             targetProps.forEach((p)=>res[p] = r[p]);
+            
+            //overwrite Header
+            var canonicalPath = new URL(url).pathname
+            for (var i = 0; i < this.headerRule.length; i++) {
+              var rule = this.headerRule[i]
+              if (rule.source.test(canonicalPath)) {
+                rule.headers.forEach(h => {
+                  if (h.key) {
+                    res.set(h.key, h.value)
+                    this.rnode.logger.debug("Overwrite custom header.path='" + canonicalPath + "', header='" + h.key + ": " + h.value+"'");
+                  }
+                })
+                break;
+              }
+            }
             res.end(b);
             resolve(res);
           };
