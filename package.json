@@ -1,6 +1,6 @@
 {
   "name": "rn-contents-server",
-  "version": "0.0.24",
+  "version": "0.0.26",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
@@ -8,20 +8,20 @@
     "start": "node lib/index.js",
     "cleanbuild": "npm run clean && npm run build",
     "build": "babel src -s inline -d lib/",
-    "clean": "del-cli lib"
+    "clean": "rimraf lib"
   },
   "dependencies": {
-    "@chip-in/resource-node": "0.0.21",
+    "@chip-in/resource-node": "0.0.22",
     "express": "^4.16.1",
     "morgan": "^1.9.1",
     "path-parser": "^4.2.0",
     "request": "^2.87.0"
   },
   "devDependencies": {
-    "babel-cli": "^6.26.0",
-    "babel-preset-es2015": "^6.24.1",
-    "cpx": "^1.5.0",
-    "del-cli": "^1.1.0"
+    "@babel/cli": "^7.14.8",
+    "@babel/core": "^7.15.0",
+    "@babel/preset-env": "^7.15.0",
+    "rimraf": "^3.0.2"
   },
   "repository": {
     "type": "git",
