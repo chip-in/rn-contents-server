@@ -11,7 +11,7 @@
     "clean": "rimraf lib"
   },
   "dependencies": {
-    "@chip-in/resource-node": "0.0.23",
+    "@chip-in/resource-node": "0.0.24",
     "express": "^4.16.1",
     "morgan": "^1.9.1",
     "path-parser": "^4.2.0",
