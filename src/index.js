@@ -178,17 +178,6 @@ class ReverseProxy extends Proxy {
               })
           })
           .on('close', () => {
-            console.log(
-              [
-                new Date().toISOString(),
-                req.ip,
-                req.method,
-                req.url,
-                '=>',
-                forwardUrl.path,
-                responseCode ?? '',
-              ].join(' ')
-            )
           })
           req.pipe(proxyRequest)
         });
