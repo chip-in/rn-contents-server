@@ -130,6 +130,14 @@ class ReverseProxy extends Proxy {
           return Promise.reject(new Error("Unexpected path is detected:" + req.url));
         }
         return new Promise((resolve, reject)=>{
+          var dstPath = String(req.url).substr(this.basePath.length-1);
+          for (var i = 0; i < this.rewriteRule.length; i++) {
+            if (this.rewriteRule[i].source.test(dstPath)) {
+              dstPath = this.rewriteRule[i].dest;
+              this.rnode.logger.info("Rewrite:" + req.url + " to " + dstPath);
+              break;
+            }
+          }
           var forwardUrl = url.parse(
             "http://localhost:" + this.port + dstPath
           )
