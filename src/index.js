@@ -1,8 +1,6 @@
-import webClient from 'request';
 import { ResourceNode, ServiceEngine, Proxy, Subscriber } from '@chip-in/resource-node';
 import http from 'http';
 import Path from 'path-parser'
-import typeis from 'type-is'
 
 process.on('unhandledRejection', console.dir);
 
@@ -132,19 +130,6 @@ class ReverseProxy extends Proxy {
           return Promise.reject(new Error("Unexpected path is detected:" + req.url));
         }
         return new Promise((resolve, reject)=>{
-          var cb = (e, r, b)=> {
-            if (e) {
-              this.rnode.logger.error("Failed to proxy backend", e);
-              reject(e);
-              return;
-            }
-            //copy properties
-            var targetProps = ["headers", "statusCode" ];
-            targetProps.forEach((p)=>res[p] = r[p]);
-            res.end(b);
-            resolve(res);
-          };
-
           var dstPath = String(req.url).substr(this.basePath.length-1);
           for (var i = 0; i < this.rewriteRule.length; i++) {
             if (this.rewriteRule[i].source.test(dstPath)) {
@@ -153,40 +138,58 @@ class ReverseProxy extends Proxy {
               break;
             }
           }
-          var url = "http://localhost:" + this.port + dstPath;
+          var forwardUrl = url.parse(
+            "http://localhost:" + this.port + dstPath
+          )
           var option = {
-            url,
-            headers: Object.assign({}, req.headers),
-            encoding: null
-          };
-          this._convertBody(option,  req.body);
-          if (method === "GET") {
-            webClient.get(option, cb);
-          } else {
-            webClient.post(option, cb);
+            host: forwardUrl.hostname,
+            port: forwardUrl.port,
+            path: forwardUrl.path,
+            method: method,
+            headers: req.headers,
           }
+          if (option.headers) delete option.headers.host
+          let responseCode
+          
+          const proxyRequest = http
+          .request(option)
+          .on('error', (e) => {
+            console.error(e)
+            responseCode = 502
+            res.statusCode = 502
+            res.end()
+            resolve(res)
+          })
+
+          .on('timeout', () => {
+            responseCode = 504
+            res.statusCode = 504
+            res.end()
+            resolve(res)
+          })
+          .on('response', (proxyRes) => {
+            responseCode = proxyRes.statusCode
+            res.writeHead(proxyRes.statusCode, proxyRes.headers)
+            let data = ''
+            proxyRes
+              .on('data', function (chunk) {
+                data += chunk
+              })
+              .on('end', function () {
+                res.end(data)
+                resolve(res)
+              })
+              .on('error', function () {
+                res.writeStatus(proxyRes.statusCode)
+                res.end()
+                resolve(res)
+              })
+          })
+          .on('close', () => {
+          })
+          req.pipe(proxyRequest)
         });
       })
-  }
-  _convertBody(option, body) {
-    if (body == null) {
-      return ;
-    }
-    if (typeof body === "object" && Object.keys(body).length === 0) {
-      return ;
-    }
-    if (body instanceof Buffer || typeof body === "string") {
-      option.body = body;
-    } else {
-      option.body = JSON.stringify(body);
-    }
-    if (option.headers) {
-      delete option.headers["content-length"];
-
-      // Body has already been decoded by core-node.
-      delete option.headers["content-encoding"];
-    }
-
   }
 }
 var rnode = new ResourceNode(coreNodeUrl, nodeClass);
