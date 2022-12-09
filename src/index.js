@@ -171,13 +171,13 @@ class ReverseProxy extends Proxy {
           .on('response', (proxyRes) => {
             responseCode = proxyRes.statusCode
             res.writeHead(proxyRes.statusCode, proxyRes.headers)
-            let data = ''
+            let data = []
             proxyRes
               .on('data', function (chunk) {
-                data += chunk
+                data.push(chunk)
               })
               .on('end', function () {
-                res.end(data)
+                res.end(Buffer.concat(data))
                 resolve(res)
               })
               .on('error', function () {
