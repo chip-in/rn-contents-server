@@ -1,6 +1,7 @@
 import { ResourceNode, ServiceEngine, Proxy, Subscriber } from '@chip-in/resource-node';
 import http from 'http';
 import Path from 'path-parser'
+import url from 'url'
 
 process.on('unhandledRejection', console.dir);
 
