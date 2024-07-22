@@ -1,6 +1,6 @@
 {
   "name": "rn-contents-server",
-  "version": "0.1.12",
+  "version": "0.1.13-rc545ef3dd.0",
   "description": "",
   "main": "lib/index.js",
   "scripts": {
